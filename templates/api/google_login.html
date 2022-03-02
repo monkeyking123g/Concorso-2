@@ -17,7 +17,7 @@
                 let token = googleUser.getAuthResponse().id_token
                 console.log('Token: ' + token)
 
-                    fetch('http://localhost/api/v1/app/google/', {
+                    fetch('http://localhost:8000/api/v1/app/google/', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json;charset=UTF-8'},
                     body : JSON.stringify({
@@ -27,7 +27,7 @@
                 })
 
                 .then(res => res.json())
-                .then(data => console.log(data))
+                .then(data => console.log('ID: ' + data.user_id + '\nToken: ' + data.access_token))
             }
            
         

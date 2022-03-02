@@ -19,7 +19,7 @@ from base.permission import IsAuthor
 class UserView(viewsets.ModelViewSet):
     parser_calsses = (parsers.MultiPartParser,)
     serializer_class = serializer.UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    #permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
        
@@ -49,19 +49,26 @@ class WinerView(viewsets.ModelViewSet):
 
 class PlayView(views.APIView):
     # defult= off ,  if on  alone is Author play 
-    #permission_classes = [IsAuthor] 
+    #permission_classes = [IsAuthor]
+
+    def time(self):
+        """ Tempo per una vincita """
+        un_day = 60 * 24
+        x =  un_day / 35
+        times =  timezone.now() + timedelta(minutes=x)
+       
+        return times                                                                          
+
+    
+    TIME = timezone.now()  - timedelta(minutes=15) # defolt time 
 
     def set_play(self, concorso):
-        # if win concorso prize -1
+        # if win, concorso prize -1
         concorso.prize.perday -= 1
         concorso.prize.save()
 
-    def random(self, nam=0):
+    def random(self):
         import random
-        #vin_time = settings.ACCESS_TOKEN_EXPIRE_MINUTES / nam
-        #time = timezone.now() +  timedelta(minutes=vin_time)
-        #if time < timezone.now():
-            #return False
         randoms = random.randint(1, 10) 
         if randoms == 5:
             return True
@@ -69,14 +76,14 @@ class PlayView(views.APIView):
             return False
     
     def user_vin(self, concorso):
-        # if user win  max_win -1
+        # if user win, max_win -1
         concorso.max_win += 1
         concorso.save()
        
     def get(self, request, pk):
         try:
-            now = timezone.now() # datetime now 
-            concorso = get_object_or_404(models.Concorso, id=pk, user = request.user,)
+            now = timezone.now() 
+            concorso = get_object_or_404(models.Concorso, id=pk, user = request.user)
             if concorso.code != None:
                 if concorso.end > now:
                     if concorso.prize.perday <= 0:
@@ -85,21 +92,23 @@ class PlayView(views.APIView):
                     for b in concorso.user.all():
                         if b == request.user:
                             if b.max_win < 3:
-                                win = self.random(chance) # chance for winner
+                                win = self.random() # chance for winner
                                 b.win.winner = win # True or False
                                 b.win.save()
-                                if b.win.winner == True:
+                         
+                                if b.win.winner == True and now >  PlayView.TIME:
                                     b.win.prize = concorso.prize
                                     b.win.save()
+                                    PlayView.TIME = self.time()
                                     self.set_play(concorso)
                                     self.user_vin(b)
                                     context = {'winner': b.win.winner,'prize': b.win.prize} 
-                                    return Response(f'congratulation {context}', status=200)
+                                    return Response(f'congratulation {context}--{PlayView.TIME}', status=200)
                                 else:
                                     b.win.prize = None
                                     b.win.save()
                                     context = {'winner': b.win.winner,'prize': b.win.prize,}
-                                    return Response(f'Not win {context}', status=200)
+                                    return Response(f'Not win {context}--{PlayView.TIME}', status=200)
                             else:
                                 return Response(f'Your maxwin > 3 : " {request.user}"  :)', status=200) 
                             
